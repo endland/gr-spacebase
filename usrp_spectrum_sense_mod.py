@@ -98,8 +98,9 @@ class parse_msg(object):
 
 
 class my_top_block(gr.top_block):
-
-    def __init__(self):
+    #modded : __init__ to accept optional min and max freq for direct call
+    #from channel object.
+    def __init__(self, set_min_freq=False, set_max_freq=False):
         gr.top_block.__init__(self)
 
         usage = "usage: %prog [options] min_freq max_freq"
@@ -135,14 +136,22 @@ class my_top_block(gr.top_block):
                           help="Attempt to enable real-time scheduling")
 
         (options, args) = parser.parse_args()
-        if len(args) != 2:
+        
+        #modded : set freq  to directly passed frequencies for explicit call of class
+        #from channel object. Can still use passed args direct from cmd line.
+        
+        if len(args) == 2:
+            self.min_freq = eng_notation.str_to_num(args[0])
+            self.max_freq = eng_notation.str_to_num(args[1])
+        if len(args) !=2 and (not set_min_freq or not set_max_freq):
             parser.print_help()
             sys.exit(1)
+        if set_min_freq and set_max_freq:
+            self.min_freq = set_min_freq
+            self.max_freq = set_max_freq
 
         self.channel_bandwidth = options.channel_bandwidth
 
-        self.min_freq = eng_notation.str_to_num(args[0])
-        self.max_freq = eng_notation.str_to_num(args[1])
 
         if self.min_freq > self.max_freq:
             # swap them

@@ -1,7 +1,7 @@
-#Class that reads from channel_list.txt in this director to read all channel
+#gr-spacebase project github.com/wirrell/gr-spacebase
+#Class that reads from channel_list.txt in this directory to read all channel
 #numbers and frequencies into an internal dict. Methods to call channel
 #frequency details include as well as an iterative return next channel
-import pprint
 
 class uhfchanlist:
     """class uhfchanlist: Returns channel frequencies upon request.
@@ -16,11 +16,12 @@ class uhfchanlist:
         """Returns a dict of the form dict(chan no.) = [centrefreq, visfreq,
         soundfreq]."""
         chanlist = {}
-        with open('channel_list.txt') as clist:
+        with open('uhfchanlist.txt') as clist:
             for line in clist:
                 cnum, visf, soundf, centref = line.split()#values in MHz
-                chanlist[cnum] = [float(centref*1000000), float(visf*1000000),
-                                  float(soundf*1000000)]#convert to Hz to avoid
+                chanlist[cnum] = [float(centref)*float(1000000),
+                                  float(visf)*float(1000000),
+                                  float(soundf)*float(1000000)]#convert to Hz to avoid
                 #having to import engineering notation modules
         return chanlist
 
@@ -32,6 +33,8 @@ class uhfchanlist:
     def full_list(self):
         """Returns full channel list."""
         return self.chanlist
+
+    #FIXME Need to add an interative "next frequency" method to call.
 
 
 if __name__ == "__main__":
