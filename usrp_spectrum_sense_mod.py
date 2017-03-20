@@ -23,6 +23,7 @@
 #comments left where modifications made - 20170312
 #LOG 20170312 : modified while loop in main_loop to ensure only one pass
 #of the specified frequency range is made.
+#LOG 20170320 : added fifo pipeout to feed to channel classes
 
 from gnuradio import gr, eng_notation
 from gnuradio import blocks
@@ -38,6 +39,7 @@ import struct
 import threading
 from datetime import datetime
 import time
+import os
 
 sys.stderr.write("Warning: this may have issues on some machines+Python version combinations to seg fault due to the callback in bin_statitics.\n\n")
 
@@ -99,7 +101,7 @@ class parse_msg(object):
 
 class my_top_block(gr.top_block):
     #modded : __init__ to accept optional min and max freq for direct call
-    #from channel object.
+    #from channel object. - GW
     def __init__(self, set_min_freq=False, set_max_freq=False):
         gr.top_block.__init__(self)
 
@@ -138,7 +140,7 @@ class my_top_block(gr.top_block):
         (options, args) = parser.parse_args()
         
         #modded : set freq  to directly passed frequencies for explicit call of class
-        #from channel object. Can still use passed args direct from cmd line.
+        #from channel object. Can still use passed args direct from cmd line.GW
         
         if len(args) == 2:
             self.min_freq = eng_notation.str_to_num(args[0])
@@ -291,12 +293,14 @@ def main_loop(tb):
 
     timestamp = 0
     centerfreq = 0
+    if not os.path.exists('usrpout.fifo'):#create fifo for piped output GW
+        os.mkfifo('usrpout.fifo')
+
+    pipeout = os.open('usrpout.fifo', os.O_WRONLY)#Open created fifo - GW
     while 1:
-        
 
         # Get the next message sent from the C++ code (blocking call).
         # It contains the center frequency and the mag squared of the fft
-	     
 	m = parse_msg(tb.msgq.delete_head())
 	# print m.data
         # m.center_freq is the center frequency at the time of capture
@@ -311,8 +315,11 @@ def main_loop(tb):
         if m.center_freq < centerfreq:
             sys.stderr.write("scanned %.1fMHz in %.1fs\n" % ((centerfreq - m.center_freq)/1.0e6, time.time() - timestamp))
             timestamp = time.time()
+            if pipeout is not None:
+                os.write(pipeout, 'end')
+               # pipeout.close() #Closes fifo on exit.- GW 
             break #BREAKS OUT OF WHILE LOOP SO ONLY ONE PASS OF FREQUENCY RANGE
-        #IS CONDUCTED.
+        #IS CONDUCTED. - GW
         centerfreq = m.center_freq
 
         for i_bin in range(bin_start, bin_stop):
@@ -324,7 +331,16 @@ def main_loop(tb):
             power_db = 10*math.log10(m.data[i_bin]/tb.usrp_rate) - noise_floor_db
 
             if (power_db > tb.squelch_threshold) and (freq >= tb.min_freq) and (freq <= tb.max_freq):
-                print datetime.now(), "center_fq", center_freq, "freq", freq, "power_db", power_db, "noise_floor_db", noise_floor_db
+
+                msg = """{} {} {} {}\n""".format(center_freq, freq,
+                                                    power_db,
+                                                    noise_floor_db) 
+                #formats data for fifo output - GW
+                os.write(pipeout, msg)
+                print msg
+                #print datetime.now(), "center_fq", center_freq, "freq", freq,
+                #"power_db", power_db, "noise_floor_db", noise_floor_db
+
 
 
 if __name__ == '__main__':
