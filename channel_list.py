@@ -3,16 +3,15 @@
 #numbers and frequencies into an internal dict. Methods to call channel
 #frequency details include as well as an iterative return next channel
 
-class uhfchanlist:
+class uhfchanlist(object):
     """class uhfchanlist: Returns channel frequencies upon request.
     Frequencies stored in form dict(chan no.) = [centrefreq, visfreq, soundfreq]
     chan_freq(chan no.) return a specific array of frequencies
     full_list() returns the complete dict of channels and frequencies."""
     def __init__(self):
-       self.chanlist = self.get_channels()
-       pprint.pprint(self.chanlist)
+       self.chanlist = self.__get_channels()
 
-    def get_channels(self):
+    def __get_channels(self):
         """Returns a dict of the form dict(chan no.) = [centrefreq, visfreq,
         soundfreq]."""
         chanlist = {}
@@ -21,7 +20,8 @@ class uhfchanlist:
                 cnum, visf, soundf, centref = line.split()#values in MHz
                 chanlist[cnum] = [float(centref)*float(1000000),
                                   float(visf)*float(1000000),
-                                  float(soundf)*float(1000000)]#convert to Hz to avoid
+                                  float(soundf)*float(1000000)]
+                #convert to Hz to avoid
                 #having to import engineering notation modules
         return chanlist
 
@@ -39,5 +39,5 @@ class uhfchanlist:
 
 if __name__ == "__main__":
     x = uhfchanlist()
-    x.full_list()
+    print x.full_list()
     print x.__doc__

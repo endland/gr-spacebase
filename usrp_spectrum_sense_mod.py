@@ -337,7 +337,7 @@ def main_loop(tb):
                                                     noise_floor_db) 
                 #formats data for fifo output - GW
                 os.write(pipeout, msg)
-                print msg
+                #print msg
                 #print datetime.now(), "center_fq", center_freq, "freq", freq,
                 #"power_db", power_db, "noise_floor_db", noise_floor_db
 
