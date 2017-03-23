@@ -47,7 +47,7 @@ class controller(object):
         pipe or sys.stdout.write()"""
         x = x + '\n'
         os.write(self.pipeout, x) 
-        print x
+        #print x
 
 
         
