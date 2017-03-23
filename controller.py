@@ -7,22 +7,48 @@
 from channel_list import uhfchanlist
 import uhf_channel
 import os
+import sys
 import random
 import pprint
 import time
 
 class controller(object):
 
-    """ADD CLASS DOC STRING HERE"""
+    """Controller class which stores and monitors all channels.
+    monitor : method that continously monitors the status of channels and runs
+    update scans.
+    
+    __define_update : Returns the prefered output function for the class.
+    Defaults to sys.stdout.write but can be passed a pipe from outside.
+    
+    __buildchannels : builds full channel bank and stores channel classes
+    
+    __initialscan : runs inital scan for all stored channels
+    
+    __dataupdate : FIXME Under construction data output method
+    
+    channel_bank : stored channels
+    status_bank : stored channels' statuses
+    time_bank : time of each stored channel's last scan"""
 
-    def __init__(self):
+    def __init__(self, pipeout=False): #pipeout is passed pipe for output
         self.chan_list = uhfchanlist().full_list()#chan nums and frequencies
         self.channel_bank = {}#stores instanced channel classes
         self.status_bank = {}#stores channel occupied status
         self.time_bank = {}#stores channel lastscan times
+        self.pipeout = pipeout
         self.__buildchannels()
         self.__initialscan()
         self.monitor()
+
+    def __postupdate(self, x):
+        print 'in post update'
+        """PRIVATE METHOD: Defines whether the postupdate function passes to a
+        pipe or sys.stdout.write()"""
+        x = x + '\n'
+        os.write(self.pipeout, x) 
+        print x
+
 
         
     def __buildchannels(self):
@@ -39,11 +65,13 @@ class controller(object):
         self.time_bank respectively."""
         for channel in self.channel_bank:
             if not self.channel_bank[channel].scan():
-                print "Inital Scan for channel {} failed".format(channel)
+                self.__postupdate("""Inital Scan for channel {}
+                                failed""".format(channel))
                 continue #If channel scan fails, moves to next channel
-            print "Initial Scan of channel {} complete, STATUS : {}".format(
+            self.__postupdate("Initial Scan of channel {} complete, STATUS :\
+            {}".format(
                                                 self.channel_bank[channel].chan_id,
-                                                self.channel_bank[channel].status)
+                                                self.channel_bank[channel].status))
             self.status_bank[channel] = self.channel_bank[channel].status
             self.time_bank[channel] = self.channel_bank[channel].lastscan
 
@@ -64,7 +92,8 @@ class controller(object):
         while True:
             for channel in high_priority: #scan all channels in high priority
                 if not channel.scan():
-                    print "Routine scan of {} failed.".format(channel.chan_id)
+                    self.__postupdate("Routine scan of {} failed.".format(
+                                                                channel.chan_id))
                     continue #If channel scan fails, moves to next channel
                 if channel.status == 'OCCUPIED':
                     #move to low priority and update status bank
@@ -72,13 +101,15 @@ class controller(object):
                     low_priority.append(channel)
                     self.status_bank[channel.chan_id] = 'OCCUPIED'
                     self.time_bank[channel.chan_id] = channel.lastscan
-                print "High Priority Channel {} scanned. STATUS : {}".format(
+                self.__postupdate("High Priority Channel {} scanned. STATUS :\
+                {}".format(
                                                                channel.chan_id,
-                                                               channel.status)
+                                                               channel.status))
             low_random = random.choice(low_priority)
             #check a low priority channel at random
             if not occupied_random.scan():
-                print "Routine scan of {} failed.".format(low_random.chan_id)
+                self.__postupdate("Routine scan of {} failed.".format(
+                                                            low_random.chan_id))
                 continue #If channel scan fails, move to next channel
             if low_random.status != 'OCCUPIED':
                 #if channel status has changed, move to high priority queue
@@ -86,13 +117,11 @@ class controller(object):
                 high_priority.append(low_random)
                 self.status_bank[low_random.chan_id] = low_random.status
                 self.time_bank[low_random.chan_id] = low_random.lastscan
-                print "Low Priority Channel {} scanned. STATUS : {}".format(
+                self.__postupdate("Low Priority Channel {} scanned. STATUS :\
+                {}".format(
                                                                channel.chan_id,
-                                                               channel.status)
-            print "monitor pass complete"
-            print "printing priority lists"
-            pprint.pprint(high_priority)
-            pprint.pprint(low_priority)
+                                                               channel.status))
+            self.__postupdate("monitor pass complete")
             #spawn child process to display data to operator whilst
             #parent continues to monitor channels
             pid = os.fork()
