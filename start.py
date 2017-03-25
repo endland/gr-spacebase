@@ -32,6 +32,7 @@ def run():
         mainController = controller(pipeout)
     os.close(pipeout)
     root = Tk()
+    root.wm_title('gr-spacebase UHF Scanner CONTROLLER OUTPUT CONSOLE')
     text = ScrolledText.ScrolledText(root)
     text.pack()
     text.after(1000, updateInput) #update text box each second

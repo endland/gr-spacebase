@@ -5,6 +5,7 @@
 #their status and last scan time.
 
 from channel_list import uhfchanlist
+from datafunnel import datafunnel
 import uhf_channel
 import os
 import sys
@@ -25,7 +26,8 @@ class controller(object):
     
     __initialscan : runs inital scan for all stored channels
     
-    __dataupdate : FIXME Under construction data output method
+    __dataupdate : calls the datafunnel.plot method which plots the current
+    status of all monitored channels
     
     channel_bank : stored channels
     status_bank : stored channels' statuses
@@ -40,6 +42,7 @@ class controller(object):
         self.__buildchannels()
         self.__initialscan()
         self.monitor()
+        self.datafunnel = datafunnel(self.channel_bank)
 
     def __postupdate(self, x):
         print 'in post update'
@@ -120,18 +123,15 @@ class controller(object):
                 {}".format(
                                                                channel.chan_id,
                                                                channel.status))
-            self.__postupdate("monitor pass complete")
-            #spawn child process to display data to operator whilst
-            #parent continues to monitor channels
-            pid = os.fork()
-            if not pid:
-                #within child process
-                self.__dataupdate()
+            self.__postupdate("Monitor pass complete.")
+            self.__dataupdate() #transfer data to datafunnel
+            print 'past __dataupdate()'
 
     def __dataupdate(self):
-        os._exit(0)
-        #FIXME data plotting method to be written
-        
+        #plot the current status of monitored channels
+        self.datafunnel.plot(status_bank)
+        #FIXME ADD STORE OF DATA FUNCTION
+        #FIXME WRITE THIS DATA FUNCTION in datafunnel.py
 
 
 
