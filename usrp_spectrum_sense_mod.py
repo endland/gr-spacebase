@@ -118,10 +118,12 @@ class my_top_block(gr.top_block):
         parser.add_option("-g", "--gain", type="eng_float", default=None,
                           help="set gain in dB (default is midpoint)")
         parser.add_option("", "--tune-delay", type="eng_float",
-                          default=0.25, metavar="SECS",
+                          default=0.10, metavar="SECS",#change default from
+                          #.25 to .1 -GW
                           help="time to delay (in seconds) after changing frequency [default=%default]")
         parser.add_option("", "--dwell-delay", type="eng_float",
-                          default=0.25, metavar="SECS",
+                          default=0.10, metavar="SECS",#changed default from
+                          #.25 to .1 - GW
                           help="time to dwell (in seconds) at a given frequency [default=%default]")
         parser.add_option("-b", "--channel-bandwidth", type="eng_float",
                           default=6.25e3, metavar="Hz",

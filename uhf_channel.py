@@ -48,13 +48,16 @@ class channel(object):
            usrp_ss.main_loop(scanner)
            os._exit(0)
        self.__getdata()
-       #FIXME ADD IN CALL TO STATUS TEST FUNCTION HERE
-       #FIXME ALSO WRITE THAT STATUS TEST FUNCTION!!
+       self.__statustest()
        return True #reports back to controller that scan is complete
        
     def __getdata(self):
         """PRIVATE METHOD: reads from the fifo output of the
         usrp_spectrum_sense_mod file and store the data from the pass."""
+        #FIXME wiping data here so that each store is a fresh scan
+        #FIXME need a pass to long term storage function so we can analyse
+        #FIXME scan history for a whole session
+        self.scan_data = []
         try:
             pipein = open('usrpout.fifo', 'r')
         except (OSError, IOError):
@@ -67,6 +70,18 @@ class channel(object):
                 break
             data_point = [float(x) for x in next_data.split()]
             self.scan_data.append(data_point)
+    
+    def __statustest(self):
+        """Primitive test function implemented that declares the channel
+        'OCCUPIED' if energy > -85dBm(ref: Implementation Issues in Spectrum
+        Sensing for Cognitive Radios - Cabric et al) is detected on the channel"""
+        for datapoint in self.scan_data:
+            if (datapoint[2] + datapoint [3]) > -85:
+                #if noise floor plus power >-85bd declare channel occupied
+                self.status = 'OCCUPIED'
+        #FIXME Write this status test funciton that operates on the saved
+        #self.scan_data
+        pass
 
             
             

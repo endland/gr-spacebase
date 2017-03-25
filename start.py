@@ -4,6 +4,7 @@
 #and updated from the controller are piped through to the GUI
 
 from Tkinter import *
+import ScrolledText
 from controller import controller
 import os
 
@@ -20,6 +21,7 @@ def run():
         print line
         text.insert(END, line)
         text.after(1000, updateInput)
+        text.see(END)
 
 
     pipein, pipeout = os.pipe() #pipe for comms between tkinter and controller
@@ -30,7 +32,7 @@ def run():
         mainController = controller(pipeout)
     os.close(pipeout)
     root = Tk()
-    text = Text(root)
+    text = ScrolledText.ScrolledText(root)
     text.pack()
     text.after(1000, updateInput) #update text box each second
     root.mainloop()

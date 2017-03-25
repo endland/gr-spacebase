@@ -47,7 +47,6 @@ class controller(object):
         pipe or sys.stdout.write()"""
         x = x + '\n'
         os.write(self.pipeout, x) 
-        #print x
 
 
         
@@ -107,7 +106,7 @@ class controller(object):
                                                                channel.status))
             low_random = random.choice(low_priority)
             #check a low priority channel at random
-            if not occupied_random.scan():
+            if not low_random.scan():
                 self.__postupdate("Routine scan of {} failed.".format(
                                                             low_random.chan_id))
                 continue #If channel scan fails, move to next channel
@@ -117,7 +116,7 @@ class controller(object):
                 high_priority.append(low_random)
                 self.status_bank[low_random.chan_id] = low_random.status
                 self.time_bank[low_random.chan_id] = low_random.lastscan
-                self.__postupdate("Low Priority Channel {} scanned. STATUS :\
+            self.__postupdate("Low Priority Channel {} scanned. STATUS :\
                 {}".format(
                                                                channel.chan_id,
                                                                channel.status))
