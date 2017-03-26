@@ -74,14 +74,26 @@ class channel(object):
     def __statustest(self):
         """Primitive test function implemented that declares the channel
         'OCCUPIED' if energy > -85dBm(ref: Implementation Issues in Spectrum
-        Sensing for Cognitive Radios - Cabric et al) is detected on the channel"""
+        Sensing for Cognitive Radios - Cabric et al) is detected on the
+        channel. Currenlty using >-80dBm for OCCUPIED and -80 > UNKNOWN >- 85"""
+        max_power = -1000
+        
+
+        #find max power recorded in the scan data
         for datapoint in self.scan_data:
-            if (datapoint[2] + datapoint [3]) > -85:
-                #if noise floor plus power >-85bd declare channel occupied
-                self.status = 'OCCUPIED'
-        #FIXME Write this status test funciton that operates on the saved
-        #self.scan_data
-        pass
+            if (datapoint[2] + datapoint[3]) > max_power:
+                max_power = (datapoint[2] + datapoint[3])
+
+
+        if max_power > -80:
+            #if noise floor plus power >-85bd declare channel occupied
+            self.status = 'OCCUPIED'
+            return
+        if -85 < max_power <= -80:
+            self.status = 'UNKNOWN'
+            return
+        self.status = 'UNOCCUPIED'
+            
 
             
             

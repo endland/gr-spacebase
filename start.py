@@ -27,7 +27,7 @@ def run():
     if not pid:
         #within child process, launch controller with passed pipe
         os.close(pipein)
-        mainController = controller(pipeout)
+        mainController = controller(pipeout, named_session=session_name)
     os.close(pipeout)
 
     root = Tk()

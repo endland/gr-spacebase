@@ -24,6 +24,7 @@
 #LOG 20170312 : modified while loop in main_loop to ensure only one pass
 #of the specified frequency range is made.
 #LOG 20170320 : added fifo pipeout to feed to channel classes
+#LOG 20170326 : changed dwell and tune delay defaults to 0.05 secs
 
 from gnuradio import gr, eng_notation
 from gnuradio import blocks
@@ -118,12 +119,12 @@ class my_top_block(gr.top_block):
         parser.add_option("-g", "--gain", type="eng_float", default=None,
                           help="set gain in dB (default is midpoint)")
         parser.add_option("", "--tune-delay", type="eng_float",
-                          default=0.10, metavar="SECS",#change default from
-                          #.25 to .1 -GW
+                          default=0.05, metavar="SECS",#change default from
+                          #.25 to .02 -GW
                           help="time to delay (in seconds) after changing frequency [default=%default]")
         parser.add_option("", "--dwell-delay", type="eng_float",
-                          default=0.10, metavar="SECS",#changed default from
-                          #.25 to .1 - GW
+                          default=0.05, metavar="SECS",#changed default from
+                          #.25 to .02 - GW
                           help="time to dwell (in seconds) at a given frequency [default=%default]")
         parser.add_option("-b", "--channel-bandwidth", type="eng_float",
                           default=6.25e3, metavar="Hz",

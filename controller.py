@@ -5,7 +5,7 @@
 #their status and last scan time.
 
 from channel_list import uhfchanlist
-from datafunnel import datafunnel
+from datafunnel import datafunnel as df
 import uhf_channel
 import os
 import sys
@@ -18,6 +18,9 @@ class controller(object):
     """Controller class which stores and monitors all channels.
     monitor : method that continously monitors the status of channels and runs
     update scans.
+    Takes args - 
+    pipeout : passed pipe for GUI communication
+    named_session : name of session for data storage purposes  
     
     __define_update : Returns the prefered output function for the class.
     Defaults to sys.stdout.write but can be passed a pipe from outside.
@@ -33,16 +36,22 @@ class controller(object):
     status_bank : stored channels' statuses
     time_bank : time of each stored channel's last scan"""
 
-    def __init__(self, pipeout=False): #pipeout is passed pipe for output
+    def __init__(self, pipeout=False, named_session='TEST SESSION'):
+        #pipeout is passed pipe for output
         self.chan_list = uhfchanlist().full_list()#chan nums and frequencies
         self.channel_bank = {}#stores instanced channel classes
         self.status_bank = {}#stores channel occupied status
         self.time_bank = {}#stores channel lastscan times
+        self.scan_number = 0 #stores the number of scan passes completed
         self.pipeout = pipeout
+        if named_session != 'TEST SESSION':
+            self.session_name = named_session
         self.__buildchannels()
         self.__initialscan()
+        #store data funnel object
+        self.datafunnel = df(self.channel_bank, named_session)
+        self.__dataupdate() #pass inital scan results out
         self.monitor()
-        self.datafunnel = datafunnel(self.channel_bank)
 
     def __postupdate(self, x):
         print 'in post update'
@@ -124,14 +133,18 @@ class controller(object):
                                                                channel.chan_id,
                                                                channel.status))
             self.__postupdate("Monitor pass complete.")
+            self.scan_number += 1
             self.__dataupdate() #transfer data to datafunnel
-            print 'past __dataupdate()'
 
     def __dataupdate(self):
         #plot the current status of monitored channels
-        self.datafunnel.plot(status_bank)
-        #FIXME ADD STORE OF DATA FUNCTION
-        #FIXME WRITE THIS DATA FUNCTION in datafunnel.py
+        self.datafunnel.plot(self.status_bank)
+
+        #store the data if this is not a TEST SESSION
+        if self.session_name != 'TEST SESSION':
+            self.datafunnel.store(self.scan_number, self.status_bank,
+                                  self.time_bank)
+        #FIXME ADD GPS DATA TO STORE FUNCTION INPUTS
 
 
 
