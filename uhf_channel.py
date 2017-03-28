@@ -7,6 +7,8 @@ import usrp_spectrum_sense_mod as usrp_ss
 import os
 import time
 import json
+import matplotlib.pyplot as plt
+import numpy as np
 try:
     #import gps module from gpsd if installed
     import gps
@@ -25,7 +27,8 @@ class channel(object):
     status:  displays 'OCCUPIED' or 'UNOCCUPIED' and initialises as 'UNKNOWN'
     lastscan: stores the time of the last channel scan (in seconds since the epoch!)
     scan_data:  stores the usrp output of said scan in an array of arrays 
-                structued [centerfreq, freq, power_db, noise_floor_db]."""
+                structued [centerfreq, freq, power_db, noise_floor_db]
+    lastgps: gps co-ordinates of last scan if options.gps_flag =1 """
     
     def __init__(self, chan_id, frequencies, options):
         self.chan_id = chan_id
@@ -139,16 +142,35 @@ class channel(object):
         analytics such as model training."""
 
         data_dump = [self.status, max_power, self.scan_data]
-        store = 'data/{}/raw_store/{}'.format(self.options.session,
-                                              self.chan_id)
+        store = 'data/{}/raw_store'.format(self.options.session)
         #make directory for session and channel
         if not os.path.exists(store):
             os.makedirs(store)
         
         #store the data in json format
-        file_name = store + '/' + str(self.scan_count) + '.json'
+        file_name = store + '/{}_{}_{}.json'.format(self.options.session,
+                                               self.chan_id,
+                                                    str(self.scan_count))
         with open(file_name, 'w+') as fp:
            json.dump(data_dump, fp, indent=4)
+           
+        #save line plot of raw data for visual inspection purposes
+        fig = plt.figure()
+        sub = fig.add_subplot(211)
+        sub.set_title('channel_id : {} | noise_floor(dBm) : {}'.format(
+            self.chan_id,
+            self.scan_data[0][3]))#noise floor is same for all values in a scan
+        x_data = [j[1] for j in self.scan_data]
+        y_data = [k[2] for k in self.scan_data]
+        sub.plot(x_data, y_data)
+
+        fig_name = store + '/{}_{}_{}.png'.format(self.options.session,
+                                               self.chan_id,
+                                                  str(self.scan_count))
+        fig.tight_layout()
+        fig.savefig(fig_name, bbox_inches='tight')
+
+
 
 
             

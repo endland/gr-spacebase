@@ -77,7 +77,7 @@ class datafunnel(object):
         """Plots the status data passed in by the controller. If more
         than 20 points are present, two figures are plotted."""
         
-        plt.ion()#interactive mode for persistent graphs whilst func continues
+        #plt.ion()#interactive mode for persistent graphs whilst func continues
         #orders status data and converts string tags to binary values
         status_data = self.__ordered(input_data, True)#'OCCUPIED' becomes 1 etc
         ylabels = (('UNOCCUPIED', '', 'UNKNOWN', '', '', 'OCCUPIED'))#y axis labels
@@ -108,6 +108,7 @@ class datafunnel(object):
         plt.axis('tight')
         fig.tight_layout() #required to prevent y-labels from being cut off
         fig.canvas.draw()
+        fig.show()
         self.current_fig = fig
 
     def store(self, scan_number, input_status, input_time, input_gps=False):

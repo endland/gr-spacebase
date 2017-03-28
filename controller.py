@@ -22,19 +22,10 @@ class controller(object):
     pipeout : passed pipe for GUI communication
     named_session : name of session for data storage purposes  
     
-    __define_update : Returns the prefered output function for the class.
-    Defaults to sys.stdout.write but can be passed a pipe from outside.
-    
-    __buildchannels : builds full channel bank and stores channel classes
-    
-    __initialscan : runs inital scan for all stored channels
-    
-    __dataupdate : calls the datafunnel.plot method which plots the current
-    status of all monitored channels
-    
     channel_bank : stored channels
     status_bank : stored channels' statuses
-    time_bank : time of each stored channel's last scan"""
+    time_bank : time of each stored channel's last scan
+    gps_benk : gps location of each channel's last scan"""
 
     def __init__(self, options, pipeout=False, named_session='TEST SESSION'):
         #pipeout is passed pipe for output
@@ -155,9 +146,12 @@ class controller(object):
 
         #store the data if this is not a TEST SESSION
         if self.session_name != 'TEST SESSION':
+            if self.options.gps_flag:
+                self.datafunnel.store(self.scan_number, self.status_bank,
+                                      self.time_bank, self.gps_bank)
+                return
             self.datafunnel.store(self.scan_number, self.status_bank,
                                   self.time_bank)
-        #FIXME ADD GPS DATA TO STORE FUNCTION INPUTS
 
 
 
