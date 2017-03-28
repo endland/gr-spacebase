@@ -1,18 +1,18 @@
 #gr-spacebase - UHF Band Spectrum Sensing for vehicular communications
 ##Software radio approach to cataloguing TV white space for enabling vehicular communications.
 
-____
 
-PREQUISITES: 
+**PREQUISITES:** 
+
+**Required:**
 
 Python 2.7
 GNU Radio : https://wiki.gnuradio.org/index.php/InstallingGR
 
-Optional:
+*Optional:*
 
 gpsd : http://www.catb.org/gpsd/installation.html (for GPS logging)
 
-____
 
 This project will be updated over the coming weeks as the modules are built.
 
@@ -28,4 +28,6 @@ If no session name is provided on start up, a 'TEST SESSION' will run and no dat
 
 Antenna Info:
 
-Please attached your antenna to the RX2 port. Currently this port is hardcoded in however there is scope to add an antenna choice (either TX/RX or RX2) in the near future.
+Default Antenna port is set to 'RX2' - 'TX/RX' can be selected via the options passing using '-A'
+
+//end 
