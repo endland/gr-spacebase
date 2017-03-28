@@ -8,11 +8,25 @@ import ScrolledText
 from controller import controller
 import os
 import time
+from optparse import OptionParser
 
 
 def run():
     """Top level run method which initiates program."""
 
+    #build options parser for the gps flag
+    parser = OptionParser()
+    parser.add_option("-G", "--gps", type='int', dest="gps_flag", default=0,
+                      help="toggle gps recording : 1 or 0")
+    parser.add_option("-r", "--rawstore", type='int',  dest="raw_store", default=0,
+                      help="store raw data from channel FFT bins : 1 or 0")
+    parser.add_option("-A", "--antenna", type="string", default='RX2',
+                      help="select Rx Antenna where appropriate : 'TX/RX' or"
+                      "'RX2'")
+    (options, args) = parser.parse_args()
+
+    print options.gps_flag
+    print options.raw_store
         
     def updateInput():
         """Update the textbox with controller output."""
@@ -22,12 +36,21 @@ def run():
         text.after(1000, updateInput)
         text.see(END)
 
+    #test for gpsd install if --gps gps_flag set to 1
+    try:
+        import gps
+    except:
+        print 'gpsd package not installed, cannot run gps_recording.'
+        raw_input('Press enter to continue without gps recording.')
+        options.gps_flag = 0
+
     pipein, pipeout = os.pipe() #pipe for comms between tkinter and controller
     pid = os.fork()
     if not pid:
         #within child process, launch controller with passed pipe
         os.close(pipein)
-        mainController = controller(pipeout, named_session=session_name)
+        mainController = controller(options, pipeout,
+                                    named_session=session_name)
     os.close(pipeout)
 
     root = Tk()

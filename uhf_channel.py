@@ -6,6 +6,12 @@
 import usrp_spectrum_sense_mod as usrp_ss
 import os
 import time
+import json
+try:
+    #import gps module from gpsd if installed
+    import gps
+except:
+    pass
 
 class channel(object):
 
@@ -21,19 +27,22 @@ class channel(object):
     scan_data:  stores the usrp output of said scan in an array of arrays 
                 structued [centerfreq, freq, power_db, noise_floor_db]."""
     
-    def __init__(self, chan_id, frequencies, antenna='RX2'):
+    def __init__(self, chan_id, frequencies, options):
         self.chan_id = chan_id
         self.centrefreq = frequencies[0]
         self.visualfreq = frequencies[1]
         self.soundfreq = frequencies[2]
-        self.antenna = antenna#Default is 'RX2'
+        self.options = options
+        self.antenna = options.antenna#Default is 'RX2'
         #use 7MHz channel bandwith - therfore min and max freq of:
         self.min_freq = self.centrefreq - 3500000
         self.max_freq = self.centrefreq + 3500000
         self.status = 'UNKNOWN' #used to establish if PU present on channel
         self.lastscan = '0' #time.time() string stored for last scan time
+        self.lastgps = None
         self.scan_data = [] #stores scan data points
         #structured [center_freq, freq, power_db, noise_floor_db]
+        self.scan_count = 0 #tracks the scan count for the channel
 
     def scan(self):
        """Channel calls a scan on itself by invoking the modified GNU RADIO
@@ -49,14 +58,15 @@ class channel(object):
            os._exit(0)
        self.__getdata()
        self.__statustest()
+       if self.options.gps_flag:
+           self.__getlocation()
        return True #reports back to controller that scan is complete
        
     def __getdata(self):
+
         """PRIVATE METHOD: reads from the fifo output of the
         usrp_spectrum_sense_mod file and store the data from the pass."""
-        #FIXME wiping data here so that each store is a fresh scan
-        #FIXME need a pass to long term storage function so we can analyse
-        #FIXME scan history for a whole session
+
         self.scan_data = []
         try:
             pipein = open('usrpout.fifo', 'r')
@@ -72,10 +82,14 @@ class channel(object):
             self.scan_data.append(data_point)
     
     def __statustest(self):
-        """Primitive test function implemented that declares the channel
-        'OCCUPIED' if energy > -85dBm(ref: Implementation Issues in Spectrum
-        Sensing for Cognitive Radios - Cabric et al) is detected on the
-        channel. Currenlty using >-80dBm for OCCUPIED and -80 > UNKNOWN >- 85"""
+
+        """PRIVATE METHOD: Primitive test function implemented that declare
+        s the channel 'OCCUPIED' if energy > -85dBm(ref: Implementation
+        Issues in Spectrum Sensing for Cognitive Radios - Cabric et al)
+        is detected on the channel. Currenlty using >-80dBm for OCCUPIE
+        D and -80 > UNKNOWN >- 85.
+        Method internally called __rawstore with max_power as a passed arg."""
+
         max_power = -1000
         
 
@@ -88,12 +102,54 @@ class channel(object):
         if max_power > -80:
             #if noise floor plus power >-85bd declare channel occupied
             self.status = 'OCCUPIED'
+            if self.options.raw_store:
+                self.__rawstore(max_power)
             return
         if -85 < max_power <= -80:
             self.status = 'UNKNOWN'
+            if self.options.raw_store:
+                self.__rawstore(max_power)
             return
         self.status = 'UNOCCUPIED'
+
+        #store raw data with classification if raw_store
+        if self.options.raw_store:
+            self.__rawstore(max_power)
+
+        #increment scan_count by 1
+        self.scan_count += 1
             
+    def __getlocation(self):
+
+        """PRIVATE METHOD: Calls the gps module from gpsd and establishes the
+        location from which the scan is being made. This is stored in
+        self.lastgps."""
+
+        session = gps.gps()
+        latitude = session.fix.latitude
+        longitude = session.fix.longitude
+
+        self.lastgps = [float(latitude), float(longitude)]
+
+        #CONSIDER: including session.fix.altitude in this
+
+    def __rawstore(self, max_power):
+
+        """PRIVATE METHOD: Stores raw FFT data from last scan for use in
+        analytics such as model training."""
+
+        data_dump = [self.status, max_power, self.scan_data]
+        store = 'data/{}/raw_store/{}'.format(self.options.session,
+                                              self.chan_id)
+        #make directory for session and channel
+        if not os.path.exists(store):
+            os.makedirs(store)
+        
+        #store the data in json format
+        file_name = store + '/' + str(self.scan_count) + '.json'
+        with open(file_name, 'w+') as fp:
+           json.dump(data_dump, fp, indent=4)
+
 
             
             
@@ -104,8 +160,16 @@ if __name__ == '__main__':
     print "test starting"
     test_channel = [474000000, 417250000, 477250000]
     test_id = '1'
-    test = channel(test_id, test_channel)
+    options = type('', (), {})() #creates empty object to mimic 'options'
+    options.gps_flag = 1
+    options.session = 'Testing'
+    options.raw_store = 1
+    try:
+        import gps
+        test = channel(test_id, test_channel, options)
+    except:
+        test = channel(test_id, test_channel)
     test.scan()
     print test.scan_data
     print test.lastscan
-        
+    print test.lastgps    

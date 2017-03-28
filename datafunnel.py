@@ -112,7 +112,10 @@ class datafunnel(object):
 
     def store(self, scan_number, input_status, input_time, input_gps=False):
 
-        """MAKE DOC STRING HERE"""
+        """Stores the passed data in .json format. Data is stored in the local
+        directory ~/data/(session_name). Data is stored in the format 
+        [scan_pass_number, time_stored, [chan_num, status, time_scanned, gps
+        coordinates(optional)]"""
         #if test session, pass on all storage
 
         if self.session_name == 'TEST SESSION':
@@ -128,7 +131,7 @@ class datafunnel(object):
             #[channel status, time scanned, gps coordinates]
             entry = [key, input_status[key], input_time[key]]
             if input_gps:
-                entry.append(input_gps(key))
+                entry.append(input_gps[key])
             data_bank.append(entry)
         output.append(data_bank)
 
@@ -169,7 +172,11 @@ if __name__ == '__main__':
     dummy_time_bank = {}
     for i in range(1,40):
         dummy_time_bank[str(i)] = time.strftime('%X %x %Z')
-    plotter.store(dummy_scan_number, dummy_status_data, dummy_time_bank)
+    dummy_gps_bank = {}
+    for i in range(1,40):
+        dummy_gps_bank[str(i)] = [100.00, 100.00]
+    plotter.store(dummy_scan_number, dummy_status_data, dummy_time_bank,
+                  dummy_gps_bank)
 
     raw_input('Enter to exit')
 

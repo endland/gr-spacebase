@@ -36,16 +36,19 @@ class controller(object):
     status_bank : stored channels' statuses
     time_bank : time of each stored channel's last scan"""
 
-    def __init__(self, pipeout=False, named_session='TEST SESSION'):
+    def __init__(self, options, pipeout=False, named_session='TEST SESSION'):
         #pipeout is passed pipe for output
         self.chan_list = uhfchanlist().full_list()#chan nums and frequencies
         self.channel_bank = {}#stores instanced channel classes
         self.status_bank = {}#stores channel occupied status
         self.time_bank = {}#stores channel lastscan times
+        self.gps_bank = {}
         self.scan_number = 0 #stores the number of scan passes completed
         self.pipeout = pipeout
-        if named_session != 'TEST SESSION':
-            self.session_name = named_session
+        self.session_name = named_session
+        self.options = options
+        #added explicitly for parsing simplicity to channel objects
+        self.options.session = named_session
         self.__buildchannels()
         self.__initialscan()
         #store data funnel object
@@ -67,7 +70,7 @@ class controller(object):
         taken from uhfchanlist.full_list. Stores instanced channels in
         self.channel_bank using the same keys provided by full_list."""
         for chan_num, frequencies in self.chan_list.iteritems():
-            channel = uhf_channel.channel(chan_num, frequencies)
+            channel = uhf_channel.channel(chan_num, frequencies, self.options)
             self.channel_bank[chan_num] = channel
             
     def __initialscan(self):
@@ -85,6 +88,8 @@ class controller(object):
                                                 self.channel_bank[channel].status))
             self.status_bank[channel] = self.channel_bank[channel].status
             self.time_bank[channel] = self.channel_bank[channel].lastscan
+            if self.options.gps_flag:
+                self.gps_bank[channel] = self.channel_bank[channel].lastgps
 
     def monitor(self):
         """monitor method: sorts channels into high and low priority lists
@@ -111,7 +116,9 @@ class controller(object):
                     high_priority.remove(channel)
                     low_priority.append(channel)
                     self.status_bank[channel.chan_id] = 'OCCUPIED'
-                    self.time_bank[channel.chan_id] = channel.lastscan
+                self.time_bank[channel.chan_id] = channel.lastscan
+                if self.options.gps_flag:
+                    self.gps_bank[channel.chan_id] = channel.lastgps
                 self.__postupdate("High Priority Channel {} scanned. STATUS :\
                 {}".format(
                                                                channel.chan_id,
@@ -127,16 +134,22 @@ class controller(object):
                 low_priority.remove(low_random)
                 high_priority.append(low_random)
                 self.status_bank[low_random.chan_id] = low_random.status
-                self.time_bank[low_random.chan_id] = low_random.lastscan
+            self.time_bank[low_random.chan_id] = low_random.lastscan
+            if self.options.gps_flag:
+                self.gps_bank[low_random.chan_id] = low_random.lastgps
             self.__postupdate("Low Priority Channel {} scanned. STATUS :\
                 {}".format(
-                                                               channel.chan_id,
-                                                               channel.status))
+                                                               low_random.chan_id,
+                                                               low_random.status))
             self.__postupdate("Monitor pass complete.")
             self.scan_number += 1
             self.__dataupdate() #transfer data to datafunnel
 
     def __dataupdate(self):
+
+        """PRIVATE METHOD: Passes data to the instanced data funnel which plots
+        and stores the data."""
+
         #plot the current status of monitored channels
         self.datafunnel.plot(self.status_bank)
 
@@ -153,4 +166,7 @@ if __name__ == '__main__':
     print "use keyboard interupt 'ctrl-c' to exit."
     time.sleep(2)
     print "test starting"
-    test_controller = controller()
+    options = type('', (), {})() #creates empty object to mimic 'options'
+    options.gps_flag = 1
+    options.raw_store = 1
+    test_controller = controller(options)

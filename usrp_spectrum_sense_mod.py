@@ -25,6 +25,10 @@
 #of the specified frequency range is made.
 #LOG 20170320 : added fifo pipeout to feed to channel classes
 #LOG 20170326 : changed dwell and tune delay defaults to 0.05 secs
+#LOG 20170328 : added to options to options parser to supress parser
+#error messages when called from another script that has passed args
+#LOG 20170328 : changed default antenna to 'RX2' but added in parsing option
+#at top level start.py using the same '-A' or '--antenna'
 
 from gnuradio import gr, eng_notation
 from gnuradio import blocks
@@ -112,7 +116,7 @@ class my_top_block(gr.top_block):
                           help="UHD device device address args [default=%default]")
         parser.add_option("", "--spec", type="string", default=None,
 	                  help="Subdevice of UHD device where appropriate")
-        parser.add_option("-A", "--antenna", type="string", default=None,
+        parser.add_option("-A", "--antenna", type="string", default='RX2',
                           help="select Rx Antenna where appropriate")
         parser.add_option("-s", "--samp-rate", type="eng_float", default=1e6,
                           help="set sample rate [default=%default]")
@@ -120,11 +124,11 @@ class my_top_block(gr.top_block):
                           help="set gain in dB (default is midpoint)")
         parser.add_option("", "--tune-delay", type="eng_float",
                           default=0.05, metavar="SECS",#change default from
-                          #.25 to .02 -GW
+                          #.25 to .05 -GW
                           help="time to delay (in seconds) after changing frequency [default=%default]")
         parser.add_option("", "--dwell-delay", type="eng_float",
                           default=0.05, metavar="SECS",#changed default from
-                          #.25 to .02 - GW
+                          #.25 to .05 - GW
                           help="time to dwell (in seconds) at a given frequency [default=%default]")
         parser.add_option("-b", "--channel-bandwidth", type="eng_float",
                           default=6.25e3, metavar="Hz",
@@ -139,6 +143,11 @@ class my_top_block(gr.top_block):
                           help="specify number of FFT bins [default=samp_rate/channel_bw]")
         parser.add_option("", "--real-time", action="store_true", default=False,
                           help="Attempt to enable real-time scheduling")
+        parser.add_option("-G", "--gps", type='int', dest="gps_flag", default=0,
+                          help="toggle gps recording : 1 or 0")
+        parser.add_option("-r", "--rawstore", type='int',  dest="raw_store",
+                          default=0,
+                          help="store raw data from channel FFT bins : 1 or 0")
 
         (options, args) = parser.parse_args()
         
