@@ -3,3 +3,4 @@
 *.py.swo
 *.json
 data
+training_data

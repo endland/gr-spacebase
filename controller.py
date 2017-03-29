@@ -114,24 +114,25 @@ class controller(object):
                 {}".format(
                                                                channel.chan_id,
                                                                channel.status))
-            low_random = random.choice(low_priority)
-            #check a low priority channel at random
-            if not low_random.scan():
-                self.__postupdate("Routine scan of {} failed.".format(
-                                                            low_random.chan_id))
-                continue #If channel scan fails, move to next channel
-            if low_random.status != 'OCCUPIED':
-                #if channel status has changed, move to high priority queue
-                low_priority.remove(low_random)
-                high_priority.append(low_random)
-                self.status_bank[low_random.chan_id] = low_random.status
-            self.time_bank[low_random.chan_id] = low_random.lastscan
-            if self.options.gps_flag:
-                self.gps_bank[low_random.chan_id] = low_random.lastgps
-            self.__postupdate("Low Priority Channel {} scanned. STATUS :\
-                {}".format(
-                                                               low_random.chan_id,
-                                                               low_random.status))
+            if low_priority: #if low_priority list is not empty
+                low_random = random.choice(low_priority)
+                #check a low priority channel at random
+                if not low_random.scan():
+                    self.__postupdate("Routine scan of {} failed.".format(
+                                                                low_random.chan_id))
+                    continue #If channel scan fails, move to next channel
+                if low_random.status != 'OCCUPIED':
+                    #if channel status has changed, move to high priority queue
+                    low_priority.remove(low_random)
+                    high_priority.append(low_random)
+                    self.status_bank[low_random.chan_id] = low_random.status
+                self.time_bank[low_random.chan_id] = low_random.lastscan
+                if self.options.gps_flag:
+                    self.gps_bank[low_random.chan_id] = low_random.lastgps
+                self.__postupdate("Low Priority Channel {} scanned. STATUS :\
+                    {}".format(
+                                low_random.chan_id,
+                                low_random.status))
             self.__postupdate("Monitor pass complete.")
             self.scan_number += 1
             self.__dataupdate() #transfer data to datafunnel

@@ -29,6 +29,8 @@
 #error messages when called from another script that has passed args
 #LOG 20170328 : changed default antenna to 'RX2' but added in parsing option
 #at top level start.py using the same '-A' or '--antenna'
+#LOG 20170329 : added DC blocker filter to filter out some of DC noise at
+#centre frequencies
 
 from gnuradio import gr, eng_notation
 from gnuradio import blocks
@@ -208,7 +210,8 @@ class my_top_block(gr.top_block):
 
         s2v = blocks.stream_to_vector(gr.sizeof_gr_complex, self.fft_size)
         
-	
+        #creating DC blocker block to remove DC component - GW
+        dc_blocker = filter.dc_blocker_cc(60, True)
 	
         mywindow = filter.window.blackmanharris(self.fft_size)
         ffter = fft.fft_vcc(self.fft_size, True, mywindow, True)
@@ -245,7 +248,7 @@ class my_top_block(gr.top_block):
 
         # FIXME leave out the log10 until we speed it up
 	#self.connect(self.u, s2v, ffter, c2mag, log, stats)
-	self.connect(self.u, s2v, ffter, c2mag, stats)
+	self.connect(self.u, dc_blocker, s2v, ffter, c2mag, stats)
 
         if options.gain is None:
             # if no gain was specified, use the mid-point in dB

@@ -141,7 +141,8 @@ class channel(object):
         """PRIVATE METHOD: Stores raw FFT data from last scan for use in
         analytics such as model training."""
 
-        data_dump = [self.status, max_power, self.scan_data]
+        #data dump of [status, max power, noise floor, raw data]
+        data_dump = [self.status, max_power, self.scan_data[0][3], self.scan_data]
         store = 'data/{}/raw_store'.format(self.options.session)
         #make directory for session and channel
         if not os.path.exists(store):
@@ -178,19 +179,25 @@ class channel(object):
 
 if __name__ == '__main__':
     print "uhf_channel.py : Running channel class test"
-    time.sleep(2)
     print "test starting"
-    test_channel = [474000000, 417250000, 477250000]
-    test_id = '1'
+    test_channel = [770000000, 767250000, 773250000]
+    test_id = '58'
     options = type('', (), {})() #creates empty object to mimic 'options'
-    options.gps_flag = 1
+    options.gps_flag = 0
     options.session = 'Testing'
     options.raw_store = 1
-    try:
-        import gps
-        test = channel(test_id, test_channel, options)
-    except:
-        test = channel(test_id, test_channel)
+    options.antenna = 'RX2'
+    test = channel(test_id, test_channel, options)
+    test.scan()
+
+    test_channel = [786000000, 783250000, 789250000]
+    test_id = '60'
+    options = type('', (), {})() #creates empty object to mimic 'options'
+    options.gps_flag = 0
+    options.session = 'Testing'
+    options.raw_store = 1
+    options.antenna = 'RX2'
+    test = channel(test_id, test_channel, options)
     test.scan()
     print test.scan_data
     print test.lastscan
