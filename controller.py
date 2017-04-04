@@ -4,7 +4,7 @@
 #them in a channel banks whilst continuously monitoring
 #their status and last scan time.
 
-from channel_list import uhfchanlist
+from sensingTools.channel_list import uhfchanlist
 from datafunnel import datafunnel as df
 import uhf_channel
 import os
@@ -91,22 +91,68 @@ class controller(object):
         high_priority = []
         low_priority = []
         for channel_num, channel in self.channel_bank.iteritems():
-            if channel.status == 'OCCUPIED': 
+            if channel.status == 'PRIMARY_OCCUPIED': 
                 #occupied channels are low scanning priority
                 low_priority.append(channel)
                 continue
             high_priority.append(channel)
+
+        #if training scan, do not remove occupied channels from the scan.
+        if self.options.training_scan:
+            while True:
+                print 'in training scan'
+                for channel in high_priority: #scan all channels in high priority
+                    if not channel.scan():
+                        self.__postupdate("Routine scan of {} failed.".format(
+                                                                    channel.chan_id))
+                        continue #If channel scan fails, moves to next channel
+                    if channel.status == 'PRIMARY_OCCUPIED':
+                        #move to low priority and update status bank
+                        high_priority.remove(channel)
+                        low_priority.append(channel)
+                        self.status_bank[channel.chan_id] = 'PRIMARY_OCCUPIED'
+                    self.time_bank[channel.chan_id] = channel.lastscan
+                    if self.options.gps_flag:
+                        self.gps_bank[channel.chan_id] = channel.lastgps
+                    self.__postupdate("High Priority Channel {} scanned. STATUS :\
+                    {}".format(
+                                                                   channel.chan_id,
+                                                                   channel.status))
+                if low_priority: #if low_priority list is not empty
+                    for channel in low_priority:
+                        #check a low priority channel at random
+                        if not channel.scan():
+                            self.__postupdate("Routine scan of {} failed.".format(
+                                                                  channel.chan_id))
+                            continue #If channel scan fails, move to next channel
+                        if channel.status != 'PRIMARY_OCCUPIED':
+                            #if channel status has changed, move to high priority queue
+                            low_priority.remove(channel)
+                            high_priority.append(channel)
+                            self.status_bank[channel.chan_id] = channel.status
+                        self.time_bank[channel.chan_id] = channel.lastscan
+                        if self.options.gps_flag:
+                            self.gps_bank[channel.chan_id] = channel.lastgps
+                        self.__postupdate("Low Priority Channel {} scanned. STATUS :\
+                            {}".format(
+                                        channel.chan_id,
+                                        channel.status))
+                self.__postupdate("Monitor pass complete.")
+                self.scan_number += 1
+                self.__dataupdate() #transfer data to datafunnel
+
+
         while True:
             for channel in high_priority: #scan all channels in high priority
                 if not channel.scan():
                     self.__postupdate("Routine scan of {} failed.".format(
                                                                 channel.chan_id))
                     continue #If channel scan fails, moves to next channel
-                if channel.status == 'OCCUPIED':
+                if channel.status == 'PRIMARY_OCCUPIED':
                     #move to low priority and update status bank
                     high_priority.remove(channel)
                     low_priority.append(channel)
-                    self.status_bank[channel.chan_id] = 'OCCUPIED'
+                    self.status_bank[channel.chan_id] = 'PRIMARY_OCCUPIED'
                 self.time_bank[channel.chan_id] = channel.lastscan
                 if self.options.gps_flag:
                     self.gps_bank[channel.chan_id] = channel.lastgps
@@ -121,7 +167,7 @@ class controller(object):
                     self.__postupdate("Routine scan of {} failed.".format(
                                                                 low_random.chan_id))
                     continue #If channel scan fails, move to next channel
-                if low_random.status != 'OCCUPIED':
+                if low_random.status != 'PRIMARY_OCCUPIED':
                     #if channel status has changed, move to high priority queue
                     low_priority.remove(low_random)
                     high_priority.append(low_random)
@@ -136,6 +182,7 @@ class controller(object):
             self.__postupdate("Monitor pass complete.")
             self.scan_number += 1
             self.__dataupdate() #transfer data to datafunnel
+
 
     def __dataupdate(self):
 

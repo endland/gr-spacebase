@@ -31,6 +31,12 @@
 #at top level start.py using the same '-A' or '--antenna'
 #LOG 20170329 : added DC blocker filter to filter out some of DC noise at
 #centre frequencies
+#LOG 20170401 : added in parsing option for storing signal properties
+#and added option here to prevent parsing clash when script called
+#at top level start.py using the '-S' or '--spstore'
+#LOG 20170401 : added in parsing option for delcaring a training scan
+#and added option here to prevent parsing clash when script called
+#at top level start.py using the '-T' or '--training'
 
 from gnuradio import gr, eng_notation
 from gnuradio import blocks
@@ -150,6 +156,11 @@ class my_top_block(gr.top_block):
         parser.add_option("-r", "--rawstore", type='int',  dest="raw_store",
                           default=0,
                           help="store raw data from channel FFT bins : 1 or 0")
+        parser.add_option("-S", "--spstore", type="int", default='0',
+                      help="store signal properties in JSON format: 1 or 0")
+        parser.add_option("-T", "--training", type="int", dest= "training_scan",
+                          default='0',
+                          help="set as training scan for data collection: 1 or 0")
 
         (options, args) = parser.parse_args()
         
@@ -211,7 +222,7 @@ class my_top_block(gr.top_block):
         s2v = blocks.stream_to_vector(gr.sizeof_gr_complex, self.fft_size)
         
         #creating DC blocker block to remove DC component - GW
-        dc_blocker = filter.dc_blocker_cc(60, True)
+        dc_blocker = filter.dc_blocker_cc(80, True)
 	
         mywindow = filter.window.blackmanharris(self.fft_size)
         ffter = fft.fft_vcc(self.fft_size, True, mywindow, True)

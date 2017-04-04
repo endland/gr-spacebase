@@ -4,6 +4,8 @@
 #stored from the last self scan. See docstrings for details.
 
 import usrp_spectrum_sense_mod as usrp_ss
+import sensingTools.SPmethods as SPmethods
+import predictionModel.SignalClassifier as SignalClassifier
 import os
 import time
 import json
@@ -46,24 +48,34 @@ class channel(object):
         self.scan_data = [] #stores scan data points
         #structured [center_freq, freq, power_db, noise_floor_db]
         self.scan_count = 0 #tracks the scan count for the channel
+        self.scan_SP = [] #stores returned signal properties from SPmethods
+        #load prediction model
+        store = os.getcwd() + '/predictionModel/training_data/cleaned_data'
+        self.classifier = SignalClassifier.loadmodel(store)
 
     def scan(self):
-       """Channel calls a scan on itself by invoking the modified GNU RADIO
-       example usrp_spectrum_sense module's top_block class and main loop."""
-       #note: u is instanced uhd.usrp_source block from GNU Radio
-       pid = os.fork()#creates child process to call scanner
-       if not pid:
+        """Channel calls a scan on itself by invoking the modified GNU RADIO
+        example usrp_spectrum_sense module's top_block class and main loop."""
+        #note: u is instanced uhd.usrp_source block from GNU Radio
+        pid = os.fork()#creates child process to call scanner
+        if not pid:
            #within child process
            scanner = usrp_ss.my_top_block(self.min_freq, self.max_freq)
            scanner.u.antenna = self.antenna
            scanner.start()
            usrp_ss.main_loop(scanner)
            os._exit(0)
-       self.__getdata()
-       self.__statustest()
-       if self.options.gps_flag:
+        self.__getdata()
+        if self.options.gps_flag:
            self.__getlocation()
-       return True #reports back to controller that scan is complete
+        self.__getSP()
+        self.__statustest()
+        #store raw data with classification if raw_store
+        if self.options.raw_store:
+           self.__rawstore(max_power)
+        #increment scan_count by 1
+        self.scan_count += 1
+        return True #reports back to controller that scan is complete
        
     def __getdata(self):
 
@@ -86,41 +98,17 @@ class channel(object):
     
     def __statustest(self):
 
-        """PRIVATE METHOD: Primitive test function implemented that declare
-        s the channel 'OCCUPIED' if energy > -85dBm(ref: Implementation
-        Issues in Spectrum Sensing for Cognitive Radios - Cabric et al)
-        is detected on the channel. Currenlty using >-80dBm for OCCUPIE
-        D and -80 > UNKNOWN >- 85.
-        Method internally called __rawstore with max_power as a passed arg."""
+        """PRIVATE METHOD: Predicts the status of the channel using the kNN
+        model from predictionModel.SignalClassifier."""
 
-        max_power = -1000
-        
+        status = self.classifier.predict(self.scan_SP)
+        if status == 2:
+            self.status = 'PRIMARY_OCCUPIED'
+        if status == 1:
+            self.status = 'SECONDARY_OCCUPIED'
+        if status == 0:
+            self.status = 'UNOCCUPIED'
 
-        #find max power recorded in the scan data
-        for datapoint in self.scan_data:
-            if (datapoint[2] + datapoint[3]) > max_power:
-                max_power = (datapoint[2] + datapoint[3])
-
-
-        if max_power > -80:
-            #if noise floor plus power >-85bd declare channel occupied
-            self.status = 'OCCUPIED'
-            if self.options.raw_store:
-                self.__rawstore(max_power)
-            return
-        if -85 < max_power <= -80:
-            self.status = 'UNKNOWN'
-            if self.options.raw_store:
-                self.__rawstore(max_power)
-            return
-        self.status = 'UNOCCUPIED'
-
-        #store raw data with classification if raw_store
-        if self.options.raw_store:
-            self.__rawstore(max_power)
-
-        #increment scan_count by 1
-        self.scan_count += 1
             
     def __getlocation(self):
 
@@ -147,11 +135,14 @@ class channel(object):
         #make directory for session and channel
         if not os.path.exists(store):
             os.makedirs(store)
+        #make json directory
+        if not os.path.exists(store + '/json'):
+            os.makedirs(store +'/json')
         
         #store the data in json format
-        file_name = store + '/{}_{}_{}.json'.format(self.options.session,
-                                               self.chan_id,
-                                                    str(self.scan_count))
+        file_name = store + '/json/{}_{}_{}.json'.format(self.chan_id,
+                                                  str(self.scan_count),
+                                                     self.options.session)
         with open(file_name, 'w+') as fp:
            json.dump(data_dump, fp, indent=4)
            
@@ -165,13 +156,54 @@ class channel(object):
         y_data = [k[2] for k in self.scan_data]
         sub.plot(x_data, y_data)
 
-        fig_name = store + '/{}_{}_{}.png'.format(self.options.session,
-                                               self.chan_id,
-                                                  str(self.scan_count))
+        fig_name = store + '/{}_{}_{}.png'.format(self.chan_id,
+                                                  str(self.scan_count),
+                                                     self.options.session)
         fig.tight_layout()
         fig.savefig(fig_name, bbox_inches='tight')
 
+    def __storeSP(self):
 
+        """Stores signal properties, sorted by environement data,
+        in json format for use in analytics."""
+
+
+        store = 'data/{}/SPdump'.format(self.options.session)
+        #make directory for store
+        if not os.path.exists(store):
+            os.makedirs(store)
+        try:
+            if self.chan_id in self.options.environment[0]:
+                #primary chan for environment
+                category = 2
+            if self.chan_id in self.options.environment[1]:
+                #secondary chan for environment
+                category = 1
+            if self.chan_id in self.options.environment[2]:
+                #unoccupied chan
+                category = 0
+        except:
+            #uncategorised
+            category = None
+
+        file_name = store + '/{}_{}_SP_{}.json'.format(self.chan_id,
+                                                  str(self.scan_count),
+                                                     self.options.session)
+        data_dump = [category, self.scan_SP]
+
+        with open(file_name, 'w+') as fp:
+           json.dump(data_dump, fp, indent=4)
+
+
+    def __getSP(self):
+        #calls the SPmethods function and returns signal properties as a list
+        #[max_power, max_power_relative, mean_power, mean_power_relative,
+        #   stddev_power, ratio_vpp_std, noise_floor]
+        self.scan_SP = SPmethods.getproperties(self.scan_data)
+
+        #dump SP data to json if flagged
+        if self.options.SPstore:
+            self.__storeSP()
 
 
             
@@ -187,8 +219,22 @@ if __name__ == '__main__':
     options.session = 'Testing'
     options.raw_store = 1
     options.antenna = 'RX2'
+    options.SPstore = 1
     test = channel(test_id, test_channel, options)
     test.scan()
+    print test.scan_SP
+
+    test_channel = [578000000, 575250000, 581250000]
+    test_id = '34'
+    options = type('', (), {})() #creates empty object to mimic 'options'
+    options.gps_flag = 0
+    options.session = 'Testing'
+    options.raw_store = 1
+    options.antenna = 'RX2'
+    options.SPstore = 1
+    test = channel(test_id, test_channel, options)
+    test.scan()
+    print test.scan_SP
 
     test_channel = [786000000, 783250000, 789250000]
     test_id = '60'
@@ -197,8 +243,7 @@ if __name__ == '__main__':
     options.session = 'Testing'
     options.raw_store = 1
     options.antenna = 'RX2'
+    options.SPstore = 1
     test = channel(test_id, test_channel, options)
     test.scan()
-    print test.scan_data
-    print test.lastscan
-    print test.lastgps    
+    print test.scan_SP

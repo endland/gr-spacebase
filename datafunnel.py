@@ -48,7 +48,7 @@ class datafunnel(object):
         ordered_data = []
         for k in [str(x) for x in int_list]:#iterate through ordered dict key
         #for corresponding values
-            if input_dict[k] == 'OCCUPIED':
+            if input_dict[k] == 'PRIMARY_OCCUPIED':
                 ordered_data.append(1)
                 continue
             if input_dict[k] == 'UNOCCUPIED':
@@ -77,10 +77,12 @@ class datafunnel(object):
         """Plots the status data passed in by the controller. If more
         than 20 points are present, two figures are plotted."""
         
-        #plt.ion()#interactive mode for persistent graphs whilst func continues
+        #close current fig if present before opening new one
+        if self.current_fig:
+            plt.close()
         #orders status data and converts string tags to binary values
         status_data = self.__ordered(input_data, True)#'OCCUPIED' becomes 1 etc
-        ylabels = (('UNOCCUPIED', '', 'UNKNOWN', '', '', 'OCCUPIED'))#y axis labels
+        ylabels = (('UNOCCUPIED', '', 'SECONDARY', '', '', 'PRIMARY'))#y axis labels
         
         #Arrange top plot data
         T_pos = np.arange(len(self.T_plot))
@@ -160,7 +162,7 @@ class datafunnel(object):
 
 if __name__ == '__main__':
     dummy_channel_bank = {}
-    choice = ['OCCUPIED', 'UNOCCUPIED', 'UNKNOWN']
+    choice = ['PRIMARY_OCCUPIED', 'UNOCCUPIED', 'SECONDARY_OCCUPIED']
     for i in range(1,40):
         dummy_channel_bank[str(i)] = 'dummy'
     plotter = datafunnel(dummy_channel_bank, named_session ='unittest')
