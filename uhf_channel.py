@@ -50,8 +50,9 @@ class channel(object):
         self.scan_count = 0 #tracks the scan count for the channel
         self.scan_SP = [] #stores returned signal properties from SPmethods
         #load prediction model
-        store = os.getcwd() + '/predictionModel/training_data/cleaned_data'
-        self.classifier = SignalClassifier.loadmodel(store)
+        store = 'predictionModel/training_data/cleaned_data'
+        print store
+        self.classifier, self.scaler = SignalClassifier.loadmodel(store)
 
     def scan(self):
         """Channel calls a scan on itself by invoking the modified GNU RADIO
@@ -72,7 +73,7 @@ class channel(object):
         self.__statustest()
         #store raw data with classification if raw_store
         if self.options.raw_store:
-           self.__rawstore(max_power)
+           self.__rawstore('9001')
         #increment scan_count by 1
         self.scan_count += 1
         return True #reports back to controller that scan is complete
@@ -101,7 +102,8 @@ class channel(object):
         """PRIVATE METHOD: Predicts the status of the channel using the kNN
         model from predictionModel.SignalClassifier."""
 
-        status = self.classifier.predict(self.scan_SP)
+        data = self.scaler.transform(self.scan_SP)
+        status = self.classifier.predict(data)
         if status == 2:
             self.status = 'PRIMARY_OCCUPIED'
         if status == 1:
@@ -200,6 +202,7 @@ class channel(object):
         #[max_power, max_power_relative, mean_power, mean_power_relative,
         #   stddev_power, ratio_vpp_std, noise_floor]
         self.scan_SP = SPmethods.getproperties(self.scan_data)
+        print self.scan_SP
 
         #dump SP data to json if flagged
         if self.options.SPstore:

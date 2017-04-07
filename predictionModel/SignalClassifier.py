@@ -10,7 +10,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
 from DataCollect import loadtraindata
-from sbs import SBS
 
 
 
@@ -25,43 +24,26 @@ def __traintest(X_train, X_test, y_train, y_test):
 
     return knn
 
-def sbs_run(model, X_data, y_targets):
-    #code adapted from Python Machine Learning - Raschka
-    sbs = SBS(model, k_features=1)
-    sbs.fit(X_data, y_targets)
-    k_feat = [len(k) for k in sbs.subsets_]
-    plt.plot(k_feat, sbs.scores_, marker = 'o')
-    plt.ylim([0.7, 1.1])
-    plt.ylabel('Accuracy')
-    plt.xlabel('Number of signal properties used')
-    plt.grid()
-    plt.show()
-    for subset in sbs.subsets_:
-        print subset
-
 def __loadsorttest(datastore = 'training_data/cleaned_data', test = False):
 
     #load in sorted SP data
-    X_data, y_targets = loadtraindata(datastore, 'D', 'D')
+    X_data, y_targets = loadtraindata(datastore)
     X_train, X_test, y_train, y_test = train_test_split(
         X_data, y_targets, test_size = 0.3, random_state = 0)
     sc = StandardScaler()
-    X_train_std = sc.fit_transform(X_train)
+    sc.fit(X_train)
+    X_train_std = sc.transform(X_train) 
     X_test_std = sc.transform(X_test)
-    model = __traintest(X_train_std, X_test_std, y_train, y_test)
-    if test:
-        knn = KNeighborsClassifier(n_neighbors=5, p=2, metric='minkowski',
-                                   leaf_size = 30, weights = 'uniform')
-        sbs_run(knn, X_train_std, y_train)
-        plot3d(X_data[:,[0,1,4]], y_targets)
+    model = __traintest(X_train_std[:,[0,2,3,4,5,6]],
+                        X_test_std[:,[0,2,3,4,5,6]], y_train, y_test)
     
-    return model
+    return model, sc
 
 def loadmodel(datastore):
 
-    model = __loadsorttest(datastore)
+    model, sc = __loadsorttest(datastore)
     
-    return model
+    return model, sc
 
 def plot3d(X_data, y_targets):
 
@@ -109,9 +91,9 @@ def plot3d(X_data, y_targets):
                ='x', label = 'Primary')
     ax.legend(bbox_to_anchor=(1.10,1.10))
     ax.autoscale(tight = True)
-    ax.view_init(elev=25., azim=-145)
+    ax.view_init(elev=25., azim=-125)
     ax.set_xlabel('Max power (dBm)')
-    ax.set_ylabel('Relative max power (dBm)')
+    ax.set_ylabel('Relative mean power (dBm)')
     ax.set_zlabel('Std dev power (dBm)')
     
     plt.show()
