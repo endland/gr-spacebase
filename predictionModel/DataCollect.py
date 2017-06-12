@@ -30,6 +30,7 @@ def loadtraindata(store, ex1 = False, ex2 = False):
             if ex2 in f:
                 continue
         with open(f) as fp:
+            print f
             d = json.load(fp)
             if d[0] ==4:
                 print f

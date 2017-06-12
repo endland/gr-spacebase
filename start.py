@@ -63,8 +63,8 @@ def run():
         text.after(1000, updateInput)
         text.see(END)
 
-    #test for gpsd install if --gps gps_flag set to 1
-    if options.gps_flag == 1:
+    #if gps_flag, import gps module
+    if options.gps_flag:
         try:
             import gps
         except:

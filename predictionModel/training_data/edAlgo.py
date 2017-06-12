@@ -19,12 +19,12 @@ def loaddata():
     locationFive = []
     locationSix = []
 
-    
-    for f in os.listdir(os.getcwd()):
+    datapath = os.getcwd() + "/cleaned_data" 
+    for f in os.listdir(datapath):
 
         if not ".py" in f:
         
-            with open(os.path.join(os.getcwd(), f)) as fd:
+            with open(os.path.join(datapath, f)) as fd:
                 d = json.load(fd)
                 if "_0_" in f:
                   locationOne.append(d)
