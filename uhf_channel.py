@@ -103,6 +103,12 @@ class channel(object):
         model from predictionModel.SignalClassifier."""
 
         data = self.scaler.transform(self.scan_SP)
+        #Removing entry 1 from statistical properties after tests show removing it
+        #increases performance
+        data = np.delete(data, [1])
+        print "printed data"
+
+        print data
         status = self.classifier.predict(data)
         if status == 2:
             self.status = 'PRIMARY_OCCUPIED'
